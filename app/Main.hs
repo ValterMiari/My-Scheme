@@ -83,7 +83,7 @@ parseChar = do
         _         -> head value
 
 parseNumber :: Parser LispVal
-parseNumber = parseDecimal1 
+parseNumber = parseDecimal1
            <|> parseDecimal1
            <|> parseHex
            <|> parseOct
@@ -115,11 +115,28 @@ parseBin = do try $ string "#b"
               (return . Number . bin2dig) x
 
 parseFloat :: Parser LispVal
-parseFloat = do 
+parseFloat = do
     x <- many1 digit
     char '.'
     y <- many1 digit
     (return . Float . fst . head . readFloat) (x++"."++y)
+
+parseList :: Parser LispVal
+parseList = List <$> sepBy parseExpr spaces
+
+parseDottedList :: Parser LispVal
+parseDottedList = do
+    head <- endBy parseExpr spaces
+    tail <- char '.' >> spaces >> parseExpr
+    return $ DottedList head tail
+
+parseQuoted :: Parser LispVal
+parseQuoted = do
+    char '\'' -- This doesn't seem to work (get recognized)
+    x <- parseExpr
+    return $ List [Atom "quote", x]
+
+
 
 parseExpr :: Parser LispVal
 parseExpr = parseAtom
@@ -127,6 +144,10 @@ parseExpr = parseAtom
          <|> try parseNumber -- 'try' is needed since they can all start with '#'
          <|> try parseBool
          <|> try parseChar
+         <|> do char '('
+                x <- try parseList <|> parseDottedList
+                char ')'
+                return x
 
 -- Omitted ex 7 
 
